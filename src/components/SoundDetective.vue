@@ -147,12 +147,29 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { playIPASound, preloadIPAAudio } from '../services/ipaAudioService'
 import { selectedLanguage, languagePhonemes } from '../stores/languageStore'
-import { useGameState, useAudioLoading, getDifficultyPhonemes } from '../utils/gameHelpers'
 import LoadingSpinner from './LoadingSpinner.vue'
 
 const router = useRouter()
-const { checkLanguageSelection, goBack, saveGameStats, calculateAccuracy } = useGameState()
-const { isAudioLoading, audioError, preloadAudioWithLoading } = useAudioLoading()
+
+// Simple game state helpers since gameHelpers.js doesn't exist
+function checkLanguageSelection() {
+  if (!selectedLanguage.value) {
+    console.warn('No language selected, using fallback symbols')
+  }
+  return true
+}
+
+function goBack() {
+  router.push('/')
+}
+
+function saveGameStats() {
+  // Stats are saved directly in localStorage in this component
+}
+
+function calculateAccuracy(correct, total) {
+  return total > 0 ? Math.round((correct / total) * 100) : 0
+}
 
 // Difficulty levels with vowels organized by commonality
 const difficulties = [
