@@ -619,27 +619,35 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  padding: 0.75rem 1rem;
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.85);
+  padding: 0.85rem 1rem;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.9);
   min-width: 130px;
-  box-shadow: inset 0 0 0 1px rgba(26, 83, 92, 0.08);
+  box-shadow: 0 2px 8px rgba(26, 83, 92, 0.08);
+  border: 1px solid rgba(26, 83, 92, 0.05);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.hud-metric:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(26, 83, 92, 0.12);
 }
 
 .metric-label {
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.1em;
   color: var(--text-light);
   font-weight: 600;
+  margin-bottom: 0.25rem;
 }
 
 .metric-value {
-  font-size: 1.3rem;
-  font-weight: 700;
+  font-size: 1.4rem;
+  font-weight: 800;
   color: var(--primary-color);
-  margin-top: 0.25rem;
   font-family: 'Manrope', sans-serif;
+  line-height: 1;
 }
 
 .hud-cta {
@@ -766,40 +774,51 @@ onMounted(async () => {
 
 .side-hud-card {
   width: 100%;
-  padding: 1.25rem 1.5rem 1.5rem;
-  border-radius: 18px;
-  border: 2px solid var(--border-color);
-  background: rgba(255, 255, 255, 0.96);
-  box-shadow: 0 10px 24px rgba(17, 37, 52, 0.12);
+  padding: 1.5rem;
+  border-radius: 20px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(249, 219, 189, 0.15));
+  box-shadow: 0 12px 32px rgba(17, 37, 52, 0.15);
   display: flex;
   flex-direction: column;
-  gap: 0.85rem;
+  gap: 1rem;
   min-height: 100%;
-}
-
-.side-hud-card h3 {
-  margin: 0 0 0.25rem;
-  font-size: 1.1rem;
-  color: var(--primary-color);
+  border: 1px solid rgba(26, 83, 92, 0.1);
+  backdrop-filter: blur(4px);
 }
 
 .side-hud-header {
   display: flex;
   align-items: center;
   gap: 0.75rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid rgba(26, 83, 92, 0.08);
 }
 
 .side-hud-metrics {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
-  margin-top: 0.75rem;
+  gap: 0.75rem;
 }
 
 .side-hud-cta {
   width: 100%;
-  margin-top: 1.25rem;
-  justify-self: stretch;
+  margin-top: 1.5rem;
+  padding: 0.85rem 1.5rem;
+  font-size: 1rem;
+  font-weight: 700;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #58cc02, #2fb86d);
+  color: #ffffff;
+  cursor: pointer;
+  box-shadow: 0 8px 20px rgba(88, 204, 2, 0.4);
+  transition: all 0.2s ease;
+  border: none;
+  letter-spacing: 0.02em;
+}
+
+.side-hud-cta:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 24px rgba(88, 204, 2, 0.5);
 }
 
 @keyframes matchPulse {
