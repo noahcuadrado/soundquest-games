@@ -1,0 +1,90 @@
+/* Global Styles - SoundQuest Brand */
+:root {
+  /* Brand Colors */
+  --primary-color: #1A535C;      /* Deep teal */
+  --secondary-color: #F9DBBD;     /* Sand */
+  --surface-color: #FFF1E3;       /* Ivory */
+  --text-dark: #102940;           /* Deep navy */
+  --text-light: #666;
+  --success-color: #2D8F47;       /* Action green */
+  --accent-lilac: #CFB3E6;        /* Secondary lilac */
+  --border-color: rgba(26, 83, 92, 0.2);
+  --error-color: #e74c3c;
+  --error-bg: #fee;
+  
+  /* Derived colors */
+  --primary-hover: rgba(26, 83, 92, 0.85);
+  --glow-color: rgba(26, 83, 92, 0.3);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  /* Brand Typography: Atkinson Hyperlegible for body */
+  font-family: 'Atkinson Hyperlegible', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  line-height: 1.6;
+  color: var(--text-dark);
+  background: var(--surface-color);
+}
+
+#app {
+  min-height: 100vh;
+}
+
+/* Typography - Brand Guidelines */
+h1, h2, h3, h4, h5, h6 {
+  /* Brand Typography: Manrope for headings */
+  font-family: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--text-dark);
+}
+
+p {
+  margin-bottom: 1rem;
+}
+
+/* Button Reset */
+button {
+  font-family: inherit;
+  font-size: inherit;
+}
+
+/* Utility Classes */
+.text-center {
+  text-align: center;
+}
+
+.mt-1 { margin-top: 0.5rem; }
+.mt-2 { margin-top: 1rem; }
+.mt-3 { margin-top: 1.5rem; }
+.mt-4 { margin-top: 2rem; }
+
+.mb-1 { margin-bottom: 0.5rem; }
+.mb-2 { margin-bottom: 1rem; }
+.mb-3 { margin-bottom: 1.5rem; }
+.mb-4 { margin-bottom: 2rem; }
+
+/* Scrollbar Styling */
+::-webkit-scrollbar {
+  width: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}

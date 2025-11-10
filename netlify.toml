@@ -1,0 +1,22 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[functions]
+  # Configure function settings
+  directory = "netlify/functions"
+  node_bundler = "esbuild"
+  external_node_modules = ["pg-native"]
+
+[build.environment]
+  NODE_VERSION = "20"
+  # Client-side API calls - no timeout limits
+  # API keys are exposed in browser for demo purposes
+  SECRETS_SCAN_OMIT_PATHS = "*.md,.env.example,netlify/functions/**,dist/**"
+  SECRETS_SCAN_OMIT_KEYS = "VITE_LLM_PROVIDER,VITE_OPENAI_API_KEY,VITE_OPENROUTER_API_KEY,VITE_STRIPE_PAYMENT_LINK"
+
+# Redirect rules (if needed in future)
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

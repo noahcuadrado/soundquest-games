@@ -1,0 +1,29 @@
+{
+  "name": "sondquest-onboarding",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "admin:dashboard": "node scripts/local-admin-server.mjs",
+    "admin:phoneme": "node scripts/local-phoneme-admin-server.mjs",
+    "admin:review": "node scripts/review-lessons.mjs",
+    "admin:review-phoneme": "node scripts/review-phoneme-lessons.mjs"
+  },
+  "dependencies": {
+    "@heroicons/vue": "^2.2.0",
+    "axios": "^1.12.2",
+    "node-fetch": "^3.3.2",
+    "openai": "^4.67.3",
+    "pg": "^8.16.3",
+    "pinia": "^3.0.3",
+    "vue": "^3.5.21",
+    "vue-router": "^4.5.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^6.0.1",
+    "vite": "^7.1.7"
+  }
+}
