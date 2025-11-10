@@ -887,17 +887,21 @@ onMounted(async () => {
   .game-grid {
     margin: 0 auto;
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 0.5rem;
-    max-width: 360px;
+    gap: 0.6rem;
+    max-width: 380px;
   }
 
   .memory-card {
-    max-width: 110px; /* Smaller cards on mobile */
+    max-width: 120px;
   }
 
   .card-front,
   .card-back {
-    font-size: 1.4rem;
+    font-size: 1.75rem;
+  }
+
+  .card-back {
+    letter-spacing: 0.02em;
   }
 
   .side-hud {

@@ -44,20 +44,23 @@
             </span>
           </div>
 
+          <div v-if="level.unlocked" class="difficulty-actions">
+            <button
+              type="button"
+              class="difficulty-play-btn"
+              :class="{ primary: selectedDifficulty === level.id }"
+              @click.stop="startLevel(level.id)"
+            >
+              {{ getLevelActionLabel(level) }}
+            </button>
+          </div>
+
           <div v-if="!level.unlocked" class="locked-overlay">
             <span class="lock-icon">🔒</span>
             <span>Complete previous level to unlock</span>
           </div>
         </div>
       </div>
-
-      <button
-        class="start-game-btn"
-        @click="startGame"
-        :disabled="!selectedDifficulty || !isLevelUnlocked(selectedDifficulty)"
-      >
-        🚀 Start Symbol Sleuth
-      </button>
     </div>
 
     <!-- Game Play -->
@@ -193,7 +196,6 @@
         <div class="results-actions">
           <button class="play-again-btn" @click="startGame">Play Again</button>
           <button class="back-btn" @click="resetGame">Change Difficulty</button>
-          <button class="back-btn" @click="goBack">Back to Games</button>
         </div>
       </div>
     </div>
@@ -384,6 +386,17 @@ function selectDifficulty(levelId) {
   selectedDifficulty.value = levelId
 }
 
+function startLevel(levelId) {
+  if (!isLevelUnlocked(levelId)) return
+  selectDifficulty(levelId)
+  startGame()
+}
+
+function getLevelActionLabel(level) {
+  if (!level.unlocked) return 'Locked'
+  return level.completed ? 'Replay' : 'Start'
+}
+
 function startGame() {
   if (!checkLanguageSelection()) return
 
@@ -515,10 +528,6 @@ function handleNextLevel() {
 
 function handleBackToQuestline() {
   router.push('/memory-questline')
-}
-
-function goBack() {
-  router.push('/')
 }
 
 onMounted(async () => {
@@ -706,6 +715,46 @@ onMounted(async () => {
   font-weight: 600;
 }
 
+.difficulty-actions {
+  margin-top: auto;
+  display: flex;
+  justify-content: center;
+}
+
+.difficulty-play-btn {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  max-width: 180px;
+  margin: 0 auto;
+  padding: 0.6rem 1.5rem;
+  border-radius: 999px;
+  border: none;
+  font-weight: 700;
+  font-size: 0.95rem;
+  font-family: 'Manrope', sans-serif;
+  color: #ffffff;
+  background: linear-gradient(135deg, #1cb0f6, #1592d8);
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+  box-shadow: 0 10px 20px rgba(28, 176, 246, 0.25);
+}
+
+.difficulty-play-btn.primary {
+  background: linear-gradient(135deg, var(--primary-color), #2fb86d);
+  box-shadow: 0 12px 24px rgba(47, 184, 109, 0.35);
+}
+
+.difficulty-play-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 24px rgba(28, 176, 246, 0.32);
+}
+
+.difficulty-play-btn.primary:hover {
+  box-shadow: 0 14px 28px rgba(47, 184, 109, 0.42);
+}
+
 .locked-overlay {
   position: absolute;
   inset: 0;
@@ -722,29 +771,6 @@ onMounted(async () => {
 
 .lock-icon {
   font-size: 1.5rem;
-}
-
-.start-game-btn {
-  background: var(--primary-color);
-  color: white;
-  border: none;
-  padding: 1rem 2.5rem;
-  border-radius: 14px;
-  font-size: 1.15rem;
-  font-weight: 700;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  box-shadow: 0 16px 30px rgba(49, 186, 124, 0.25);
-}
-
-.start-game-btn:hover:not(:disabled) {
-  background: var(--primary-dark);
-  transform: translateY(-2px);
-}
-
-.start-game-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
 }
 
 /* Game Layout */

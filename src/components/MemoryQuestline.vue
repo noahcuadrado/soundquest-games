@@ -527,6 +527,9 @@ onMounted(() => {
 }
 
 .play-level-btn {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
   background: #1cb0f6;
   color: #ffffff;
   border: none;
@@ -621,12 +624,14 @@ onMounted(() => {
   }
 
   .map-track {
-    left: 32px;
+    left: 36px;
+    width: 10px;
   }
 
   .map-node {
     justify-content: flex-start;
-    padding-left: 80px;
+    padding-left: 88px;
+    margin: 2.75rem 0;
   }
 
   .position-left,
@@ -638,40 +643,132 @@ onMounted(() => {
 
   .node-content {
     flex-direction: row;
-    gap: 1.25rem;
+    gap: 1.15rem;
   }
 
   .node-card {
     min-width: 0;
-    width: clamp(240px, 70vw, 320px);
+    width: clamp(240px, 72vw, 320px);
+    padding: 1rem 1.2rem;
+    border-radius: 20px;
+    box-shadow: 0 14px 22px rgba(20, 42, 66, 0.12);
+  }
+
+  .node-circle {
+    width: 74px;
+    height: 74px;
+    font-size: 1.7rem;
+    box-shadow: 0 14px 24px rgba(248, 183, 0, 0.28);
+  }
+
+  .node-circle::after {
+    width: 54px;
+    height: 14px;
+    bottom: -12px;
+  }
+
+  .node-icon {
+    font-size: 1.8rem;
+  }
+
+  .card-header {
+    align-items: flex-start;
+  }
+
+  .level-name {
+    font-size: 1.1rem;
+  }
+
+  .level-stars {
+    gap: 0.2rem;
+  }
+
+  .level-description {
+    font-size: 0.9rem;
+  }
+
+  .card-footer {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.65rem;
+  }
+
+  .best-score {
+    font-size: 0.8rem;
+  }
+
+  .play-level-btn {
+    width: 100%;
+    text-align: center;
+    padding: 0.6rem 1rem;
+  }
+
+  .locked-message {
+    width: 100%;
+    text-align: left;
+    font-size: 0.8rem;
+    line-height: 1.4;
   }
 }
 
 @media (max-width: 520px) {
+  .memory-questline {
+    padding: 1.75rem 0.85rem 3rem;
+  }
+
+  .header-content h1 {
+    font-size: 2.2rem;
+  }
+
+  .subtitle {
+    font-size: 0.95rem;
+  }
+
+  .progress-panel {
+    padding: 1.35rem 1.25rem;
+    border-radius: 24px;
+    gap: 1.25rem;
+  }
+
   .progress-stats {
     flex-direction: column;
   }
 
   .map-track {
-    left: 24px;
+    left: 26px;
   }
 
   .map-node {
-    padding-left: 64px;
-    margin: 2.5rem 0;
+    padding-left: 70px;
+    margin: 2.35rem 0;
   }
 
   .node-card {
-    width: 100%;
+    width: min(100%, 300px);
+    padding: 0.95rem 1.05rem;
   }
 
   .card-footer {
     flex-direction: column;
     align-items: flex-start;
+    gap: 0.55rem;
   }
 
   .play-level-btn {
-    align-self: flex-end;
+    align-self: stretch;
+    font-size: 0.9rem;
+  }
+
+  .node-circle {
+    width: 66px;
+    height: 66px;
+    font-size: 1.5rem;
+  }
+
+  .node-circle::after {
+    width: 46px;
+    height: 12px;
+    bottom: -10px;
   }
 }
 </style>
