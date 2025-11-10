@@ -1,208 +1,224 @@
 <template>
   <div class="minimal-pairs-game">
     <header class="game-header">
-      <h1>⚖️ Minimal Pairs Master</h1>
-      <p class="subtitle">Distinguish between similar-sounding vowels</p>
+      <div class="header-title">
+        <h1>Minimal Pairs Master</h1>
+        <p class="subtitle">Distinguish between similar-sounding vowels</p>
+      </div>
+      <div class="header-level" v-if="gameState === 'playing'">
+        <span class="header-emoji">{{ getCurrentLevelEmoji() }}</span>
+        <div class="header-pill">
+          <span class="pill-label">Difficulty</span>
+          <span class="pill-name">{{ currentDifficultyName }}</span>
+        </div>
+      </div>
     </header>
 
     <!-- Difficulty Selection -->
     <div v-if="gameState === 'difficulty'" class="difficulty-selection">
       <div class="difficulty-cards">
-        <div 
-          v-for="level in difficultyLevels" 
+        <div
+          v-for="level in availableLevels"
           :key="level.id"
           class="difficulty-card"
-          :class="{ selected: selectedDifficulty === level.id }"
-          @click="selectedDifficulty = level.id"
+          :class="{
+            selected: selectedDifficulty === level.id,
+            locked: !level.unlocked
+          }"
+          @click="selectDifficulty(level.id)"
         >
-          <div class="difficulty-dot" :style="{ backgroundColor: level.color }"></div>
-          <h3>{{ level.name }}</h3>
-          <p>{{ level.description }}</p>
+          <div class="difficulty-header">
+            <span class="difficulty-emoji">{{ level.emoji }}</span>
+            <h3>{{ level.name }}</h3>
+          </div>
+          <p class="difficulty-description">{{ level.description }}</p>
           <div class="example-pairs">
             <span v-for="pair in level.examplePairs" :key="pair" class="example-pair">{{ pair }}</span>
           </div>
+          <div v-if="!level.unlocked" class="locked-overlay">
+            <span class="lock-icon">🔒</span>
+            <span>Complete previous level to unlock</span>
+          </div>
         </div>
       </div>
-      <button 
+      <button
         class="start-game-btn"
         @click="startGame"
-        :disabled="!selectedDifficulty"
+        :disabled="!selectedDifficulty || !isLevelUnlocked(selectedDifficulty)"
       >
         🎯 Start Minimal Pairs Master
       </button>
     </div>
 
     <!-- Game Play -->
-    <div v-else-if="gameState === 'playing'" class="game-play">
-      <div class="pairs-card">
-        <div class="pairs-header">
-          <h2>Question {{ currentQuestion + 1 }} of {{ totalQuestions }}</h2>
-          <div class="score-display">Score: {{ score }}/{{ totalQuestions * 100 }}</div>
-        </div>
-        
-        <div class="pair-display">
-          <h3>Listen carefully and identify which sound you hear:</h3>
-          <div class="sound-pair">
-            <div class="pair-symbols">
-              <span class="symbol-option">{{ currentPair.symbol1 }}</span>
-              <span class="vs-text">vs</span>
-              <span class="symbol-option">{{ currentPair.symbol2 }}</span>
-            </div>
-            <div class="pair-description">
-              <p>{{ currentPair.description }}</p>
-            </div>
+    <div v-else-if="gameState === 'playing'" class="game-layout">
+      <!-- LEFT: Main game area -->
+      <div class="game-main">
+        <div class="pairs-card">
+          <div class="pairs-header">
+            <h2>Question {{ currentQuestion + 1 }} of {{ totalQuestions }}</h2>
+            <div class="score-display">Score: {{ score }}/{{ totalQuestions * 100 }}</div>
           </div>
-        </div>
-
-        <div class="audio-section">
-          <div class="play-sound-area">
-            <button 
-              class="play-mystery-btn"
-              @click="playMysterySound"
-              :disabled="isPlaying"
-            >
-              <span v-if="isPlaying">🔊 Playing...</span>
-              <span v-else>🎵 Play Mystery Sound</span>
-            </button>
-            <div class="plays-remaining">
-              Plays remaining: {{ playsRemaining }}
-            </div>
-          </div>
-
-          <div class="reference-sounds">
-            <h4>Reference sounds (listen to compare):</h4>
-            <div class="reference-buttons">
-              <button 
-                class="reference-btn"
-                @click="playReferenceSound(currentPair.symbol1)"
-                :disabled="isPlaying"
-              >
-                <span class="ref-symbol">{{ currentPair.symbol1 }}</span>
-                <span class="ref-label">{{ currentPair.label1 }}</span>
-              </button>
-              <button 
-                class="reference-btn"
-                @click="playReferenceSound(currentPair.symbol2)"
-                :disabled="isPlaying"
-              >
-                <span class="ref-symbol">{{ currentPair.symbol2 }}</span>
-                <span class="ref-label">{{ currentPair.label2 }}</span>
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <div class="answer-section">
-          <h4>Which sound did you hear in the mystery audio?</h4>
-          <div class="answer-options">
-            <button 
-              class="answer-btn"
-              :class="{ 
-                selected: selectedAnswer === currentPair.symbol1,
-                correct: showResult && currentPair.symbol1 === correctAnswer,
-                incorrect: showResult && selectedAnswer === currentPair.symbol1 && currentPair.symbol1 !== correctAnswer
-              }"
-              @click="selectAnswer(currentPair.symbol1)"
-              :disabled="showResult"
-            >
-              <span class="answer-symbol">{{ currentPair.symbol1 }}</span>
-              <span class="answer-label">{{ currentPair.label1 }}</span>
-            </button>
-            <button 
-              class="answer-btn"
-              :class="{ 
-                selected: selectedAnswer === currentPair.symbol2,
-                correct: showResult && currentPair.symbol2 === correctAnswer,
-                incorrect: showResult && selectedAnswer === currentPair.symbol2 && currentPair.symbol2 !== correctAnswer
-              }"
-              @click="selectAnswer(currentPair.symbol2)"
-              :disabled="showResult"
-            >
-              <span class="answer-symbol">{{ currentPair.symbol2 }}</span>
-              <span class="answer-label">{{ currentPair.label2 }}</span>
-            </button>
-          </div>
-        </div>
-
-        <div class="question-actions">
-          <button 
-            v-if="!showResult"
-            class="submit-btn"
-            @click="submitAnswer"
-            :disabled="!selectedAnswer"
-          >
-            Submit Answer
-          </button>
-          <button 
-            v-else
-            class="next-btn"
-            @click="nextQuestion"
-          >
-            {{ currentQuestion + 1 < totalQuestions ? 'Next Question' : 'View Results' }}
-          </button>
-        </div>
-
-        <div v-if="showResult" class="result-feedback">
-          <div v-if="selectedAnswer === correctAnswer" class="correct-feedback">
-            ✅ Correct! You heard the {{ correctAnswer }} sound.
-            <div class="feedback-detail">{{ getFeedbackMessage() }}</div>
-          </div>
-          <div v-else class="incorrect-feedback">
-            ❌ Incorrect. The mystery sound was {{ correctAnswer }}.
-            <div class="feedback-detail">{{ getFeedbackMessage() }}</div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Results -->
-    <div v-else-if="gameState === 'results'" class="game-results">
-      <div class="results-card">
-        <h2>⚖️ Minimal Pairs Master Complete!</h2>
-        <div class="score-display">
-          <div class="final-score">{{ score }}/{{ totalQuestions * 100 }}</div>
-          <div class="accuracy">{{ Math.round((score / (totalQuestions * 100)) * 100) }}% Accuracy</div>
-        </div>
-        
-        <div class="pairs-breakdown">
-          <h3>Pair Results:</h3>
-          <div class="pair-results">
-            <div 
-              v-for="(result, index) in questionResults" 
-              :key="index"
-              class="pair-result"
-            >
-              <span class="pair-symbols">{{ result.pair }}</span>
-              <span class="pair-score" :class="{ correct: result.correct }">
-                {{ result.correct ? '✅ 100' : '❌ 0' }}
-              </span>
-              <div class="pair-bar">
-                <div 
-                  class="pair-fill" 
-                  :style="{ width: result.correct ? '100%' : '0%', backgroundColor: result.correct ? '#10b981' : '#ef4444' }"
-                ></div>
+          
+          <div class="pair-display">
+            <h3>Listen carefully and identify which sound you hear:</h3>
+            <div class="sound-pair">
+              <div class="pair-symbols">
+                <span class="symbol-option">{{ currentPair.symbol1 }}</span>
+                <span class="vs-text">vs</span>
+                <span class="symbol-option">{{ currentPair.symbol2 }}</span>
+              </div>
+              <div class="pair-description">
+                <p>{{ currentPair.description }}</p>
               </div>
             </div>
           </div>
-        </div>
 
-        <div class="performance-message">
-          <p v-if="accuracy >= 90">🏆 Outstanding! You have excellent vowel discrimination skills!</p>
-          <p v-else-if="accuracy >= 75">👍 Great job! You can distinguish most vowel pairs well.</p>
-          <p v-else-if="accuracy >= 60">📚 Good effort! Keep practicing with similar vowel sounds.</p>
-          <p v-else>💪 Keep practicing! Vowel discrimination improves with training.</p>
-        </div>
+          <div class="audio-section">
+            <div class="play-sound-area">
+              <button
+                class="play-mystery-btn"
+                @click="playMysterySound"
+                :disabled="isPlaying"
+              >
+                <span v-if="isPlaying">🔊 Playing...</span>
+                <span v-else>🎵 Play Mystery Sound</span>
+              </button>
+              <div class="plays-remaining">
+                Plays remaining: {{ playsRemaining }}
+              </div>
+            </div>
 
-        <div class="results-actions">
-          <button class="play-again-btn" @click="resetGame">
-            🔄 Practice Again
-          </button>
-          <button class="back-btn" @click="goBack">
-            ← Back to Games
-          </button>
+            <div class="reference-sounds">
+              <h4>Reference sounds (listen to compare):</h4>
+              <div class="reference-buttons">
+                <button
+                  class="reference-btn"
+                  @click="playReferenceSound(currentPair.symbol1)"
+                  :disabled="isPlaying"
+                >
+                  <span class="ref-symbol">{{ currentPair.symbol1 }}</span>
+                  <span class="ref-label">{{ currentPair.label1 }}</span>
+                </button>
+                <button
+                  class="reference-btn"
+                  @click="playReferenceSound(currentPair.symbol2)"
+                  :disabled="isPlaying"
+                >
+                  <span class="ref-symbol">{{ currentPair.symbol2 }}</span>
+                  <span class="ref-label">{{ currentPair.label2 }}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="answer-section">
+            <h4>Which sound did you hear in the mystery audio?</h4>
+            <div class="answer-options">
+              <button
+                class="answer-btn"
+                :class="{
+                  selected: selectedAnswer === currentPair.symbol1,
+                  correct: showResult && currentPair.symbol1 === correctAnswer,
+                  incorrect: showResult && selectedAnswer === currentPair.symbol1 && currentPair.symbol1 !== correctAnswer
+                }"
+                @click="selectAnswer(currentPair.symbol1)"
+                :disabled="showResult"
+              >
+                <span class="answer-symbol">{{ currentPair.symbol1 }}</span>
+                <span class="answer-label">{{ currentPair.label1 }}</span>
+              </button>
+              <button
+                class="answer-btn"
+                :class="{
+                  selected: selectedAnswer === currentPair.symbol2,
+                  correct: showResult && currentPair.symbol2 === correctAnswer,
+                  incorrect: showResult && selectedAnswer === currentPair.symbol2 && currentPair.symbol2 !== correctAnswer
+                }"
+                @click="selectAnswer(currentPair.symbol2)"
+                :disabled="showResult"
+              >
+                <span class="answer-symbol">{{ currentPair.symbol2 }}</span>
+                <span class="answer-label">{{ currentPair.label2 }}</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="question-actions">
+            <button
+              v-if="!showResult"
+              class="submit-btn"
+              @click="submitAnswer"
+              :disabled="!selectedAnswer"
+            >
+              Submit Answer
+            </button>
+            <button
+              v-else
+              class="next-btn"
+              @click="nextQuestion"
+            >
+              {{ currentQuestion + 1 < totalQuestions ? 'Next Question' : 'View Results' }}
+            </button>
+          </div>
+
+          <div v-if="showResult" class="result-feedback">
+            <div v-if="selectedAnswer === correctAnswer" class="correct-feedback">
+              ✅ Correct! You heard the {{ correctAnswer }} sound.
+              <div class="feedback-detail">{{ getFeedbackMessage() }}</div>
+            </div>
+            <div v-else class="incorrect-feedback">
+              ❌ Incorrect. The mystery sound was {{ correctAnswer }}.
+              <div class="feedback-detail">{{ getFeedbackMessage() }}</div>
+            </div>
+          </div>
         </div>
       </div>
+
+      <!-- RIGHT: Side HUD -->
+      <aside class="side-hud">
+        <div class="side-hud-card">
+          <div class="side-hud-header">
+            <span class="summary-emoji">{{ getCurrentLevelEmoji() }}</span>
+            <div class="summary-text">
+              <span class="summary-label">Current level</span>
+              <h2>{{ currentDifficultyName }}</h2>
+            </div>
+          </div>
+          <p class="summary-description">
+            {{ getCurrentLevelDescription() }}
+          </p>
+
+          <div class="side-hud-metrics">
+            <div class="hud-metric">
+              <span class="metric-label">Question</span>
+              <span class="metric-value">{{ currentQuestion + 1 }}/{{ totalQuestions }}</span>
+            </div>
+            <div class="hud-metric">
+              <span class="metric-label">Score</span>
+              <span class="metric-value">{{ score }}/{{ totalQuestions * 100 }}</span>
+            </div>
+            <div class="hud-metric">
+              <span class="metric-label">Best</span>
+              <span class="metric-value">{{ bestScore > 0 ? bestScore : 'N/A' }}</span>
+            </div>
+          </div>
+
+          <button @click="resetGame" class="hud-cta side-hud-cta">
+            New Game
+          </button>
+        </div>
+      </aside>
     </div>
+
+    <!-- Game Celebration Component -->
+    <GameCelebration
+      :show="showCompletion"
+      :celebrationData="celebrationData"
+      @close="handleCelebrationClose"
+      @play-again="handlePlayAgain"
+      @back-to-questline="handleBackToQuestline"
+    />
   </div>
 </template>
 
@@ -211,11 +227,16 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ipaAudioService } from '../services/ipaAudioService.js'
 import { selectedLanguage, languagePhonemes } from '../stores/languageStore.js'
+import GameCelebration from './shared/GameCelebration.vue'
+import { minimalPairsProgressionSystem, getMinimalPairsLevels, completeMinimalPairsLevel } from '../utils/progressionSystem'
 
 const router = useRouter()
 
+// Get available levels from progression system
+const availableLevels = ref([])
+
 // Game state
-const gameState = ref('difficulty')
+const gameState = ref('difficulty') // 'difficulty', 'playing', 'results'
 const selectedDifficulty = ref('easy')
 const currentQuestion = ref(0)
 const totalQuestions = ref(10)
@@ -226,6 +247,95 @@ const showResult = ref(false)
 const correctAnswer = ref(null)
 const playsRemaining = ref(3)
 const isPlaying = ref(false)
+const showCompletion = ref(false)
+const bestScore = ref(0)
+const isNewBest = ref(false)
+const levelCompleted = ref(false)
+const newUnlocks = ref([])
+const starRating = ref(0)
+
+// Celebration data for GameCelebration component
+const celebrationData = computed(() => {
+  const baseData = {
+    icon: levelCompleted.value ? '🏆' : '⚖️',
+    title: levelCompleted.value ? 'Level Complete!' : 'Game Finished!',
+    message: `You scored ${score.value} out of ${totalQuestions.value * 100} points!`,
+    score: score.value,
+    scoreLabel: 'Points',
+    achievements: [],
+    showPlayAgain: true,
+    showNextLevel: false,
+    showBackToQuestline: true
+  }
+
+  // Add achievements for new best score
+  if (isNewBest.value) {
+    baseData.achievements.push({
+      id: 'new-best',
+      icon: '🏆',
+      name: 'New Best Score!'
+    })
+  }
+
+  // Add star rating achievement
+  if (levelCompleted.value && starRating.value > 0) {
+    const starText = '⭐'.repeat(starRating.value)
+    baseData.achievements.push({
+      id: 'star-rating',
+      icon: starText,
+      name: `${starRating.value} Star${starRating.value > 1 ? 's' : ''} Earned!`
+    })
+  }
+
+  // Add level unlock achievements
+  newUnlocks.value.forEach(level => {
+    baseData.achievements.push({
+      id: `unlock-${level.id}`,
+      icon: '🔓',
+      name: `${level.name} Level Unlocked!`
+    })
+  })
+
+  // Show next level button if there are unlocked levels
+  const nextLevel = availableLevels.value.find(level =>
+    level.unlocked && !level.completed && level.id !== selectedDifficulty.value
+  )
+  baseData.showNextLevel = !!nextLevel
+
+  return baseData
+})
+
+// Load best score from localStorage
+function loadBestScore() {
+  const key = `game-minimal-pairs-best-${selectedDifficulty.value}`
+  const saved = localStorage.getItem(key)
+  bestScore.value = saved ? parseInt(saved) : 0
+}
+
+// Save best score to localStorage
+function saveBestScore(score) {
+  const key = `game-minimal-pairs-best-${selectedDifficulty.value}`
+  localStorage.setItem(key, score.toString())
+  bestScore.value = score
+}
+
+// Check if a level is unlocked
+function isLevelUnlocked(levelId) {
+  const level = availableLevels.value.find(l => l.id === levelId)
+  return level?.unlocked || false
+}
+
+// Get current level emoji
+function getCurrentLevelEmoji() {
+  const level = availableLevels.value.find(d => d.id === selectedDifficulty.value)
+  return level?.emoji || '🟢'
+}
+
+// Get current level description
+function getCurrentLevelDescription() {
+  const level = availableLevels.value.find(d => d.id === selectedDifficulty.value)
+  return level?.description || 'Common English vowel pairs'
+}
 
 // Minimal pairs for different difficulty levels
 const minimalPairs = {
@@ -327,31 +437,6 @@ const minimalPairs = {
   ]
 }
 
-// Difficulty levels
-const difficultyLevels = [
-  {
-    id: 'easy',
-    name: 'Easy',
-    description: 'Common English vowel pairs',
-    color: '#10b981',
-    examplePairs: ['i/ɪ', 'e/ɛ', 'u/ʊ']
-  },
-  {
-    id: 'medium',
-    name: 'Medium',
-    description: 'Challenging vowel distinctions',
-    color: '#f59e0b',
-    examplePairs: ['ɛ/æ', 'ə/ʌ', 'ɔ/ɑ']
-  },
-  {
-    id: 'hard',
-    name: 'Hard',
-    description: 'Advanced phonetic contrasts',
-    color: '#ef4444',
-    examplePairs: ['ɜ/ə', 'œ/ɶ', 'ɨ/ɯ']
-  }
-]
-
 // Computed properties
 const currentPair = computed(() => {
   if (!questionResults.value[currentQuestion.value]) return {}
@@ -360,6 +445,10 @@ const currentPair = computed(() => {
 
 const accuracy = computed(() => {
   return (score.value / (totalQuestions.value * 100)) * 100
+})
+
+const currentDifficultyName = computed(() => {
+  return availableLevels.value.find(d => d.id === selectedDifficulty.value)?.name || 'Easy'
 })
 
 // Language selection check
@@ -371,7 +460,18 @@ function checkLanguageSelection() {
   return true
 }
 
-// Game functions
+// Select difficulty and start game
+function selectDifficulty(difficultyId) {
+  const level = availableLevels.value.find(l => l.id === difficultyId)
+  if (!level || !level.unlocked) {
+    console.warn('Level not unlocked:', difficultyId)
+    return
+  }
+  
+  selectedDifficulty.value = difficultyId
+  loadBestScore()
+}
+
 function startGame() {
   // Check if language is selected
   if (!checkLanguageSelection()) {
@@ -382,6 +482,10 @@ function startGame() {
   gameState.value = 'playing'
   currentQuestion.value = 0
   score.value = 0
+  selectedAnswer.value = null
+  showResult.value = false
+  correctAnswer.value = null
+  playsRemaining.value = 3
 }
 
 function generateQuestions() {
@@ -391,8 +495,15 @@ function generateQuestions() {
   if (languagePhonemes.value.length > 0) {
     pairs = generateDynamicPairs()
   } else {
-    // Fallback to default minimal pairs
-    pairs = minimalPairs[selectedDifficulty.value]
+    // Fallback to default minimal pairs from progression system
+    const level = availableLevels.value.find(l => l.id === selectedDifficulty.value)
+    if (level && level.symbols) {
+      // Convert symbols to minimal pairs format
+      pairs = generatePairsFromSymbols(level.symbols)
+    } else {
+      // Ultimate fallback
+      pairs = minimalPairs[selectedDifficulty.value]
+    }
   }
   
   // Ensure we have pairs to work with
@@ -417,6 +528,43 @@ function generateQuestions() {
       answered: false
     })
   }
+}
+
+function generatePairsFromSymbols(symbols) {
+  // Generate minimal pairs from available symbols
+  const pairs = []
+  
+  // Use predefined pairs that match the symbols
+  const allPairs = [...minimalPairs.easy, ...minimalPairs.medium, ...minimalPairs.hard]
+  
+  for (let i = 0; i < symbols.length; i++) {
+    for (let j = i + 1; j < symbols.length; j++) {
+      const symbol1 = symbols[i]
+      const symbol2 = symbols[j]
+      
+      // Find a matching pair from predefined pairs
+      const matchingPair = allPairs.find(pair =>
+        (pair.symbol1 === symbol1 && pair.symbol2 === symbol2) ||
+        (pair.symbol1 === symbol2 && pair.symbol2 === symbol1)
+      )
+      
+      if (matchingPair) {
+        pairs.push(matchingPair)
+      } else {
+        // Create a basic pair if no match found
+        pairs.push({
+          symbol1: symbol1,
+          symbol2: symbol2,
+          label1: symbol1.toUpperCase(),
+          label2: symbol2.toUpperCase(),
+          description: `${symbol1} vs ${symbol2}`,
+          feedback: `Listen carefully to distinguish between ${symbol1} and ${symbol2}.`
+        })
+      }
+    }
+  }
+  
+  return pairs
 }
 
 function generateDynamicPairs() {
@@ -525,38 +673,39 @@ function nextQuestion() {
     correctAnswer.value = null
     playsRemaining.value = 3
   } else {
-    finishGame()
+    completeGame()
   }
 }
 
-function finishGame() {
-  gameState.value = 'results'
-  saveGameStats()
-}
-
-function saveGameStats() {
-  try {
-    const stats = JSON.parse(localStorage.getItem('minimalPairsStats') || '{}')
-    const difficultyStats = stats[selectedDifficulty.value] || { played: 0, bestScore: 0 }
-    
-    difficultyStats.played++
-    if (score.value > difficultyStats.bestScore) {
-      difficultyStats.bestScore = score.value
-    }
-    
-    stats[selectedDifficulty.value] = difficultyStats
-    localStorage.setItem('minimalPairsStats', JSON.stringify(stats))
-
-    // Update overall game progress
-    const gameProgress = JSON.parse(localStorage.getItem('gameProgress') || '{}')
-    gameProgress.minimalPairs = (gameProgress.minimalPairs || 0) + 1
-    localStorage.setItem('gameProgress', JSON.stringify(gameProgress))
-  } catch (error) {
-    console.error('Error saving game stats:', error)
+function completeGame() {
+  // Check if this is a new best score
+  if (bestScore.value === 0 || score.value > bestScore.value) {
+    isNewBest.value = true
+    saveBestScore(score.value)
   }
+  
+  // Check level completion and unlocks
+  const completionResult = completeMinimalPairsLevel(
+    selectedDifficulty.value,
+    score.value,
+    0,
+    accuracy.value
+  )
+  levelCompleted.value = completionResult.completed
+  newUnlocks.value = completionResult.newUnlocks
+  starRating.value = completionResult.starRating
+  if (completionResult.isNewBest) {
+    isNewBest.value = true
+  }
+  
+  // Refresh available levels to show new unlocks
+  loadAvailableLevels()
+  
+  showCompletion.value = true
 }
 
 function resetGame() {
+  showCompletion.value = false
   gameState.value = 'difficulty'
   currentQuestion.value = 0
   score.value = 0
@@ -565,10 +714,38 @@ function resetGame() {
   showResult.value = false
   correctAnswer.value = null
   playsRemaining.value = 3
+  isNewBest.value = false
+  levelCompleted.value = false
+  newUnlocks.value = []
+  starRating.value = 0
 }
 
-function goBack() {
-  router.push('/')
+function handleCelebrationClose() {
+  showCompletion.value = false
+  gameState.value = 'difficulty'
+}
+
+function handlePlayAgain() {
+  showCompletion.value = false
+  startGame()
+}
+
+function handleBackToQuestline() {
+  router.push('/memory-questline')
+}
+
+// Load available levels from progression system
+function loadAvailableLevels() {
+  availableLevels.value = getMinimalPairsLevels()
+  
+  // Ensure we have a valid selected difficulty
+  if (!availableLevels.value.find(l => l.id === selectedDifficulty.value && l.unlocked)) {
+    // Find first unlocked level
+    const firstUnlocked = availableLevels.value.find(l => l.unlocked)
+    if (firstUnlocked) {
+      selectedDifficulty.value = firstUnlocked.id
+    }
+  }
 }
 
 // Initialize audio service
@@ -577,6 +754,20 @@ onMounted(async () => {
   if (!checkLanguageSelection()) {
     return
   }
+  
+  // Load progression system levels
+  loadAvailableLevels()
+  
+  // Check if a specific level was requested via query parameter
+  const route = router.currentRoute.value
+  if (route.query.level) {
+    const requestedLevel = availableLevels.value.find(l => l.id === route.query.level)
+    if (requestedLevel && requestedLevel.unlocked) {
+      selectedDifficulty.value = route.query.level
+    }
+  }
+  
+  loadBestScore()
   
   try {
     // Preload audio for current phonemes if available

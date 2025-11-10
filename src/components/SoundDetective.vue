@@ -1,144 +1,183 @@
 <template>
   <div class="sound-detective">
     <header class="game-header">
-      <h1>🔍 Sound Detective</h1>
-      <p class="subtitle">Listen carefully and identify the IPA symbol</p>
+      <div class="header-title">
+        <h1>Sound Detective</h1>
+        <p class="subtitle">Listen carefully and identify the IPA symbol</p>
+      </div>
+      <div class="header-level" v-if="gameStarted">
+        <span class="header-emoji">{{ getCurrentLevelEmoji() }}</span>
+        <div class="header-pill">
+          <span class="pill-label">Difficulty</span>
+          <span class="pill-name">{{ currentDifficultyName }}</span>
+        </div>
+      </div>
     </header>
 
-    <!-- Difficulty Selector -->
-    <div class="difficulty-selector" v-if="!gameStarted">
+    <!-- Difficulty Selection -->
+    <div v-if="gameState === 'difficulty'" class="difficulty-selection">
+      <div class="difficulty-cards">
+        <div
+          v-for="level in availableLevels"
+          :key="level.id"
+          class="difficulty-card"
+          :class="{
+            selected: selectedDifficulty === level.id,
+            locked: !level.unlocked
+          }"
+          @click="selectDifficulty(level.id)"
+        >
+          <div class="difficulty-header">
+            <span class="difficulty-emoji">{{ level.emoji }}</span>
+            <h3>{{ level.name }}</h3>
+          </div>
+          <p class="difficulty-description">{{ level.description }}</p>
+          <div v-if="!level.unlocked" class="locked-overlay">
+            <span class="lock-icon">🔒</span>
+            <span>Complete previous level to unlock</span>
+          </div>
+        </div>
+      </div>
       <button
-        v-for="level in difficulties"
-        :key="level.id"
-        @click="selectDifficulty(level.id)"
-        class="difficulty-btn"
-        :class="{ active: selectedDifficulty === level.id }"
+        class="start-game-btn"
+        @click="startGame"
+        :disabled="!selectedDifficulty || !isLevelUnlocked(selectedDifficulty)"
       >
-        <span class="difficulty-emoji">{{ level.emoji }}</span>
-        <span class="difficulty-name">{{ level.name }}</span>
-        <span class="difficulty-desc">{{ level.description }}</span>
-      </button>
-    </div>
-
-    <!-- Start Game Button -->
-    <div class="start-section" v-if="!gameStarted">
-      <button @click="startGame" class="btn-start">
         🎵 Start Sound Detective
       </button>
     </div>
 
-    <!-- Game Area -->
-    <div class="game-area" v-if="gameStarted">
-      <!-- Current Question -->
-      <div class="question-section">
-        <div class="question-number">
-          Question {{ currentQuestion + 1 }} of {{ totalQuestions }}
+    <!-- Game Play -->
+    <div v-else-if="gameState === 'playing'" class="game-layout">
+      <!-- LEFT: Main game area -->
+      <div class="game-main">
+        <!-- Current Question -->
+        <div class="question-section">
+          <div class="question-number">
+            Question {{ currentQuestion + 1 }} of {{ totalQuestions }}
+          </div>
+          
+          <div class="audio-section">
+            <button
+              @click="playCurrentSound"
+              class="play-btn"
+              :disabled="isPlaying"
+              :class="{ playing: isPlaying }"
+            >
+              <span class="play-icon">{{ isPlaying ? '🔊' : '🔊' }}</span>
+              <span class="play-text">{{ isPlaying ? 'Playing...' : 'Play Sound' }}</span>
+            </button>
+            <div class="play-count">
+              Plays remaining: {{ playsRemaining }}
+            </div>
+          </div>
         </div>
-        
-        <div class="audio-section">
-          <button 
-            @click="playCurrentSound" 
-            class="play-btn"
-            :disabled="isPlaying"
-            :class="{ playing: isPlaying }"
+
+        <!-- Answer Choices -->
+        <div class="choices-grid">
+          <button
+            v-for="(choice, index) in currentChoices"
+            :key="index"
+            @click="selectAnswer(choice)"
+            class="choice-btn"
+            :class="{
+              selected: selectedAnswer === choice,
+              correct: showResult && choice === correctAnswer,
+              incorrect: showResult && selectedAnswer === choice && choice !== correctAnswer
+            }"
+            :disabled="showResult"
           >
-            <span class="play-icon">{{ isPlaying ? '🔊' : '🔊' }}</span>
-            <span class="play-text">{{ isPlaying ? 'Playing...' : 'Play Sound' }}</span>
+            {{ choice }}
           </button>
-          <div class="play-count">
-            Plays remaining: {{ playsRemaining }}
-          </div>
         </div>
-      </div>
 
-      <!-- Answer Choices -->
-      <div class="choices-grid">
-        <button
-          v-for="(choice, index) in currentChoices"
-          :key="index"
-          @click="selectAnswer(choice)"
-          class="choice-btn"
-          :class="{ 
-            selected: selectedAnswer === choice,
-            correct: showResult && choice === correctAnswer,
-            incorrect: showResult && selectedAnswer === choice && choice !== correctAnswer
-          }"
-          :disabled="showResult"
+        <!-- Result Feedback -->
+        <div class="result-section" v-if="showResult">
+          <div class="result-details">
+            <div class="result-message" :class="{ correct: isCorrect, incorrect: !isCorrect }">
+              <span class="result-icon">{{ isCorrect ? '✅' : '❌' }}</span>
+              <span class="result-text">
+                {{ isCorrect ? 'Correct!' : 'Incorrect!' }}
+              </span>
+            </div>
+            <div class="correct-answer" v-if="!isCorrect">
+              The correct answer was: <strong>{{ correctAnswer }}</strong>
+            </div>
+          </div>
+          <button @click="nextQuestion" class="btn-next mobile-action-button">
+            {{ currentQuestion + 1 < totalQuestions ? 'Next Question' : 'View Results' }}
+          </button>
+        </div>
+
+        <div
+          v-if="showResult"
+          class="mobile-result-toast"
+          :class="{ correct: isCorrect, incorrect: !isCorrect }"
         >
-          {{ choice }}
-        </button>
-      </div>
-
-      <!-- Result Feedback -->
-      <div class="result-section" v-if="showResult">
-        <div class="result-message" :class="{ correct: isCorrect, incorrect: !isCorrect }">
-          <span class="result-icon">{{ isCorrect ? '✅' : '❌' }}</span>
-          <span class="result-text">
-            {{ isCorrect ? 'Correct!' : 'Incorrect!' }}
-          </span>
-        </div>
-        <div class="correct-answer" v-if="!isCorrect">
-          The correct answer was: <strong>{{ correctAnswer }}</strong>
-        </div>
-        <button @click="nextQuestion" class="btn-next">
-          {{ currentQuestion + 1 < totalQuestions ? 'Next Question' : 'View Results' }}
-        </button>
-      </div>
-
-      <!-- Submit Answer Button -->
-      <div class="submit-section" v-if="!showResult && selectedAnswer">
-        <button @click="submitAnswer" class="btn-submit">
-          Submit Answer
-        </button>
-      </div>
-    </div>
-
-    <!-- Game Stats -->
-    <div class="game-stats" v-if="gameStarted">
-      <div class="stat-item">
-        <span class="stat-label">Difficulty:</span>
-        <span class="stat-value">{{ currentDifficultyName }}</span>
-      </div>
-      <div class="stat-item">
-        <span class="stat-label">Score:</span>
-        <span class="stat-value">{{ score }}/{{ currentQuestion + (showResult ? 1 : 0) }}</span>
-      </div>
-      <div class="stat-item">
-        <span class="stat-label">Accuracy:</span>
-        <span class="stat-value">{{ accuracy }}%</span>
-      </div>
-    </div>
-
-    <!-- Final Results -->
-    <div v-if="gameComplete" class="completion-overlay" @click="closeResults">
-      <div class="completion-popup" @click.stop>
-        <div class="completion-icon">🎉</div>
-        <h2>Game Complete!</h2>
-        <p>You identified {{ score }} out of {{ totalQuestions }} sounds correctly!</p>
-        <div class="completion-stats">
-          <div class="stat-box">
-            <span class="stat-num">{{ score }}/{{ totalQuestions }}</span>
-            <span class="stat-txt">Correct</span>
-          </div>
-          <div class="stat-box">
-            <span class="stat-num">{{ accuracy }}%</span>
-            <span class="stat-txt">Accuracy</span>
-          </div>
-          <div class="stat-box" v-if="isNewBest">
-            <span class="stat-num">🏆</span>
-            <span class="stat-txt">New Best!</span>
+          <span class="toast-icon">{{ isCorrect ? '✅' : '❌' }}</span>
+          <div class="toast-text">
+            <span class="toast-title">{{ isCorrect ? 'Correct!' : 'Incorrect!' }}</span>
+            <span
+              v-if="!isCorrect"
+              class="toast-answer"
+            >
+              Answer: <strong>{{ correctAnswer }}</strong>
+            </span>
           </div>
         </div>
-        <div class="completion-actions">
-          <button @click="playAgain" class="btn-play-again">
-            Play Again
-          </button>
-          <button @click="closeResults" class="btn-close">
-            Back to Games
+
+        <!-- Submit Answer Button -->
+        <div class="submit-section" v-if="!showResult && selectedAnswer">
+          <button @click="submitAnswer" class="btn-submit mobile-action-button">
+            Submit Answer
           </button>
         </div>
       </div>
+
+      <!-- RIGHT: Side HUD -->
+      <aside class="side-hud">
+        <div class="side-hud-card">
+          <div class="side-hud-header">
+            <span class="summary-emoji">{{ getCurrentLevelEmoji() }}</span>
+            <div class="summary-text">
+              <span class="summary-label">Current level</span>
+              <h2>{{ currentDifficultyName }}</h2>
+            </div>
+          </div>
+          <p class="summary-description">
+            {{ getCurrentLevelDescription() }}
+          </p>
+
+          <div class="side-hud-metrics">
+            <div class="hud-metric">
+              <span class="metric-label">Score</span>
+              <span class="metric-value">{{ score }}/{{ currentQuestion + (showResult ? 1 : 0) }}</span>
+            </div>
+            <div class="hud-metric">
+              <span class="metric-label">Accuracy</span>
+              <span class="metric-value">{{ accuracy }}%</span>
+            </div>
+            <div class="hud-metric">
+              <span class="metric-label">Best</span>
+              <span class="metric-value">{{ bestScore > 0 ? bestScore : 'N/A' }}</span>
+            </div>
+          </div>
+
+          <button @click="resetGame" class="hud-cta side-hud-cta">
+            New Game
+          </button>
+        </div>
+      </aside>
     </div>
+
+    <!-- Game Celebration Component -->
+    <GameCelebration
+      :show="showCompletion"
+      :celebrationData="celebrationData"
+      @close="handleCelebrationClose"
+      @play-again="handlePlayAgain"
+      @back-to-questline="handleBackToQuestline"
+    />
   </div>
 </template>
 
@@ -147,67 +186,17 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { playIPASound, preloadIPAAudio } from '../services/ipaAudioService'
 import { selectedLanguage, languagePhonemes } from '../stores/languageStore'
-import LoadingSpinner from './LoadingSpinner.vue'
+import GameCelebration from './shared/GameCelebration.vue'
+import { soundDetectiveProgressionSystem, getSoundDetectiveLevels, completeSoundDetectiveLevel } from '../utils/progressionSystem'
 
 const router = useRouter()
 
-// Simple game state helpers since gameHelpers.js doesn't exist
-function checkLanguageSelection() {
-  if (!selectedLanguage.value) {
-    console.warn('No language selected, using fallback symbols')
-  }
-  return true
-}
-
-function goBack() {
-  router.push('/')
-}
-
-function saveGameStats() {
-  // Stats are saved directly in localStorage in this component
-}
-
-function calculateAccuracy(correct, total) {
-  return total > 0 ? Math.round((correct / total) * 100) : 0
-}
-
-// Difficulty levels with vowels organized by commonality
-const difficulties = [
-  {
-    id: 'easy',
-    name: 'Easy',
-    emoji: '🟢',
-    description: 'Most common vowels',
-    symbols: ['i', 'e', 'a', 'o', 'u', 'ə']
-  },
-  {
-    id: 'medium',
-    name: 'Medium',
-    emoji: '🟡',
-    description: 'Common + distinct vowels',
-    symbols: ['i', 'ɪ', 'e', 'ɛ', 'æ', 'ɑ', 'ɔ', 'o', 'ʊ', 'u', 'ə', 'ʌ']
-  },
-  {
-    id: 'hard',
-    name: 'Hard',
-    emoji: '🔴',
-    description: 'All vowels including rare',
-    symbols: [
-      'i', 'y', 'ɨ', 'ʉ', 'ɯ', 'u',
-      'ɪ', 'ʏ', 'ʊ',
-      'e', 'ø', 'ɘ', 'ɵ', 'ɤ', 'o',
-      'ə',
-      'ɛ', 'œ', 'ɜ', 'ɞ', 'ʌ', 'ɔ',
-      'æ', 'ɐ',
-      'a', 'ɶ', 'ɑ', 'ɒ'
-    ]
-  }
-]
+// Get available levels from progression system
+const availableLevels = ref([])
 
 // Game state
+const gameState = ref('difficulty') // 'difficulty', 'playing', 'results'
 const selectedDifficulty = ref('easy')
-const gameStarted = ref(false)
-const gameComplete = ref(false)
 const currentQuestion = ref(0)
 const totalQuestions = ref(10)
 const score = ref(0)
@@ -219,30 +208,126 @@ const correctAnswer = ref('')
 const currentChoices = ref([])
 const isPlaying = ref(false)
 const playsRemaining = ref(3)
+const showCompletion = ref(false)
+const bestScore = ref(0)
 const isNewBest = ref(false)
-
-// Computed properties
-const currentDifficultyName = computed(() => {
-  return difficulties.find(d => d.id === selectedDifficulty.value)?.name || 'Easy'
-})
+const levelCompleted = ref(false)
+const newUnlocks = ref([])
+const starRating = ref(0)
+const feedbackAudioContext = ref(null)
 
 const accuracy = computed(() => {
   const questionsAnswered = currentQuestion.value + (showResult.value ? 1 : 0)
-  return questionsAnswered > 0 ? Math.round((score.value / questionsAnswered) * 100) : 0
+  if (questionsAnswered === 0) return 0
+  return Math.round((score.value / questionsAnswered) * 100)
 })
 
-// Game functions
+// Celebration data for GameCelebration component
+const celebrationData = computed(() => {
+  const baseData = {
+    icon: levelCompleted.value ? '🏆' : '🎧',
+    title: levelCompleted.value ? 'Level Complete!' : 'Game Finished!',
+    message: `You identified ${score.value} out of ${totalQuestions.value} sounds correctly!`,
+    score: score.value,
+    scoreLabel: 'Correct',
+    achievements: [],
+    showPlayAgain: true,
+    showNextLevel: false,
+    showBackToQuestline: true
+  }
+
+  if (isNewBest.value) {
+    baseData.achievements.push({
+      id: 'new-best',
+      icon: '🏅',
+      name: 'New Best Score!'
+    })
+  }
+
+  if (levelCompleted.value && starRating.value > 0) {
+    const starText = '⭐️'.repeat(starRating.value)
+    baseData.achievements.push({
+      id: 'star-rating',
+      icon: starText,
+      name: `${starRating.value} Star${starRating.value > 1 ? 's' : ''} Earned!`
+    })
+  }
+
+  newUnlocks.value.forEach(level => {
+    baseData.achievements.push({
+      id: `unlock-${level.id}`,
+      icon: '🔓',
+      name: `${level.name} Level Unlocked!`
+    })
+  })
+
+  const nextLevel = availableLevels.value.find(level =>
+    level.unlocked && !level.completed && level.id !== selectedDifficulty.value
+  )
+  baseData.showNextLevel = !!nextLevel
+
+  return baseData
+})
+
+// Load best score from localStorage
+function loadBestScore() {
+  const key = `game-sound-detective-best-${selectedDifficulty.value}`
+  const saved = localStorage.getItem(key)
+  bestScore.value = saved ? parseInt(saved) : 0
+}
+
+// Save best score to localStorage
+function saveBestScore(score) {
+  const key = `game-sound-detective-best-${selectedDifficulty.value}`
+  localStorage.setItem(key, score.toString())
+  bestScore.value = score
+}
+
+// Check if a level is unlocked
+function isLevelUnlocked(levelId) {
+  const level = availableLevels.value.find(l => l.id === levelId)
+  return level?.unlocked || false
+}
+
+// Get current level emoji
+function getCurrentLevelEmoji() {
+  const level = availableLevels.value.find(d => d.id === selectedDifficulty.value)
+  return level?.emoji || '🟢'
+}
+
+// Get current level description
+function getCurrentLevelDescription() {
+  const level = availableLevels.value.find(d => d.id === selectedDifficulty.value)
+  return level?.description || 'Most common vowels'
+}
+
+// Check if user has selected a language
+function checkLanguageSelection() {
+  if (!selectedLanguage.value) {
+    console.warn('No language selected, using fallback symbols')
+  }
+  return true
+}
+
+// Select difficulty and start game
 function selectDifficulty(difficultyId) {
+  const level = availableLevels.value.find(l => l.id === difficultyId)
+  if (!level || !level.unlocked) {
+    console.warn('Level not unlocked:', difficultyId)
+    return
+  }
+  
   selectedDifficulty.value = difficultyId
+  loadBestScore()
 }
 
 function startGame() {
-  // Check if language is selected, redirect if not
+  // Check if language is selected
   if (!checkLanguageSelection()) {
     return
   }
   
-  gameStarted.value = true
+  gameState.value = 'playing'
   generateQuestions()
   loadQuestion()
 }
@@ -268,9 +353,19 @@ function generateQuestions() {
       ? filteredPhonemes.map(p => p.phoneme_ipa)
       : languagePhonemes.value.map(p => p.phoneme_ipa)
   } else {
-    // Fallback to default difficulty symbols
-    const difficulty = difficulties.find(d => d.id === selectedDifficulty.value)
-    availableSymbols = [...difficulty.symbols]
+    // Fallback to default difficulty symbols from progression system
+    const level = availableLevels.value.find(l => l.id === selectedDifficulty.value)
+    if (level && level.symbols) {
+      availableSymbols = level.symbols
+    } else {
+      // Ultimate fallback
+      const defaultSymbols = {
+        easy: ['/i/', '/e/', '/a/', '/o/', '/u/', '/ə/'],
+        medium: ['/i/', '/ɪ/', '/e/', '/ɛ/', '/æ/', '/ɑ/', '/ɔ/', '/o/', '/ʊ/', '/u/', '/ə/', '/ʌ/'],
+        hard: ['/i/', '/y/', '/ɨ/', '/ʉ/', '/ɯ/', '/u/', '/ɪ/', '/ʏ/', '/ʊ/', '/e/', '/ø/', '/ɘ/', '/ɵ/', '/ɤ/', '/o/', '/ə/', '/ɛ/', '/œ/', '/ɜ/', '/ɞ/', '/ʌ/', '/ɔ/', '/æ/', '/ɐ/', '/a/', '/ɶ/', '/ɑ/', '/ɒ/']
+      }
+      availableSymbols = defaultSymbols[selectedDifficulty.value] || defaultSymbols.easy
+    }
   }
   
   questions.value = []
@@ -348,6 +443,7 @@ function submitAnswer() {
   isCorrect.value = selectedAnswer.value === correctAnswer.value
   if (isCorrect.value) {
     score.value++
+    playCorrectChime()
   }
   
   showResult.value = true
@@ -363,32 +459,114 @@ function nextQuestion() {
   loadQuestion()
 }
 
-function completeGame() {
-  gameComplete.value = true
+function getFeedbackAudioContext() {
+  if (typeof window === 'undefined') return null
+  const AudioContext = window.AudioContext || window.webkitAudioContext
+  if (!AudioContext) return null
+  if (!feedbackAudioContext.value) {
+    feedbackAudioContext.value = new AudioContext()
+  }
+  return feedbackAudioContext.value
+}
+
+function playCorrectChime() {
+  const context = getFeedbackAudioContext()
+  if (!context) return
   
-  // Check if this is a new best score
-  const bestScoreKey = `game-sound-detective-best-${selectedDifficulty.value}`
-  const currentBest = parseInt(localStorage.getItem(bestScoreKey) || '0')
+  if (context.state === 'suspended') {
+    context.resume().catch(error => {
+      console.warn('Unable to resume audio context:', error)
+    })
+  }
   
-  if (score.value > currentBest) {
-    isNewBest.value = true
-    localStorage.setItem(bestScoreKey, score.value.toString())
+  const now = context.currentTime
+  const oscillator = context.createOscillator()
+  const gain = context.createGain()
+  
+  oscillator.type = 'triangle'
+  oscillator.frequency.setValueAtTime(660, now)
+  oscillator.frequency.exponentialRampToValueAtTime(1320, now + 0.2)
+  
+  gain.gain.setValueAtTime(0.0001, now)
+  gain.gain.exponentialRampToValueAtTime(0.2, now + 0.03)
+  gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.45)
+  
+  oscillator.connect(gain)
+  gain.connect(context.destination)
+  
+  oscillator.start(now)
+  oscillator.stop(now + 0.5)
+  oscillator.onended = () => {
+    oscillator.disconnect()
+    gain.disconnect()
   }
 }
 
-function playAgain() {
-  // Reset game state
-  gameStarted.value = false
-  gameComplete.value = false
+function completeGame() {
+  if (bestScore.value === 0 || score.value > bestScore.value) {
+    isNewBest.value = true
+    saveBestScore(score.value)
+  }
+
+  const completionResult = completeSoundDetectiveLevel(
+    selectedDifficulty.value,
+    score.value,
+    0,
+    accuracy.value
+  )
+  levelCompleted.value = completionResult.completed
+  newUnlocks.value = completionResult.newUnlocks
+  starRating.value = completionResult.starRating
+  if (completionResult.isNewBest) {
+    isNewBest.value = true
+    bestScore.value = Math.max(bestScore.value, score.value)
+  }
+  
+  // Refresh available levels to show new unlocks
+  loadAvailableLevels()
+  
+  showCompletion.value = true
+}
+
+function resetGame() {
+  showCompletion.value = false
+  gameState.value = 'difficulty'
   currentQuestion.value = 0
   score.value = 0
   selectedAnswer.value = ''
   showResult.value = false
   isNewBest.value = false
+  levelCompleted.value = false
+  newUnlocks.value = []
+  starRating.value = 0
 }
 
-function closeResults() {
-  router.push('/')
+function handleCelebrationClose() {
+  showCompletion.value = false
+  gameState.value = 'difficulty'
+}
+
+function handlePlayAgain() {
+  showCompletion.value = false
+  startGame()
+}
+
+function handleBackToQuestline() {
+  router.push('/memory-questline')
+}
+
+// Load available levels from progression system
+function loadAvailableLevels() {
+  availableLevels.value = getSoundDetectiveLevels()
+  
+  // Ensure we have a valid selected difficulty
+  if (!availableLevels.value.find(l => l.id === selectedDifficulty.value && l.unlocked)) {
+    // Find first unlocked level
+    const firstUnlocked = availableLevels.value.find(l => l.unlocked)
+    if (firstUnlocked) {
+      selectedDifficulty.value = firstUnlocked.id
+    }
+  }
 }
 
 // Initialize on mount
@@ -398,128 +576,227 @@ onMounted(async () => {
     return
   }
   
-  // Preload audio for current phonemes if available
+  // Load progression system levels
+  loadAvailableLevels()
+  
+  // Check if a specific level was requested via query parameter
+  const route = router.currentRoute.value
+  if (route.query.level) {
+    const requestedLevel = availableLevels.value.find(l => l.id === route.query.level)
+    if (requestedLevel && requestedLevel.unlocked) {
+      selectedDifficulty.value = route.query.level
+    }
+  }
+  
+  loadBestScore()
+  
+  // Preload audio for current phonemes
   if (languagePhonemes.value.length > 0) {
     const symbols = languagePhonemes.value.map(p => p.phoneme_ipa)
     await preloadIPAAudio(symbols)
   } else {
     // Fallback: preload default symbols
-    const allSymbols = difficulties.flatMap(d => d.symbols)
-    const uniqueSymbols = [...new Set(allSymbols)]
-    await preloadIPAAudio(uniqueSymbols)
+    const allSymbols = ['/i/', '/e/', '/a/', '/o/', '/u/', '/ə/', '/ɪ/', '/ɛ/', '/æ/', '/ɑ/', '/ɔ/', '/ʊ/', '/ʌ/']
+    await preloadIPAAudio(allSymbols)
   }
 })
 </script>
 
 <style scoped>
 .sound-detective {
-  max-width: 900px;
+  max-width: 1200px;
   margin: 0 auto;
-  padding: 2rem;
+  padding: 2.25rem 2.5rem 2.5rem;
   min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  gap: 1.75rem;
 }
 
 .game-header {
-  text-align: center;
-  margin-bottom: 3rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
 }
 
-.game-header h1 {
-  font-size: 2.5rem;
+.header-title h1 {
+  font-size: 2.25rem;
   color: var(--primary-color);
-  margin: 0 0 0.5rem 0;
+  margin: 0 0 0.35rem 0;
   font-family: 'Manrope', sans-serif;
   font-weight: 800;
 }
 
+.header-title {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
 .subtitle {
-  font-size: 1.2rem;
+  font-size: 1.05rem;
   color: var(--text-light);
   margin: 0;
 }
 
-.difficulty-selector {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 1rem;
-  margin-bottom: 3rem;
-}
-
-.difficulty-btn {
-  padding: 1.5rem 1rem;
-  background: var(--surface-color);
-  border: 3px solid var(--border-color);
-  border-radius: 12px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  display: flex;
-  flex-direction: column;
+.header-level {
+  display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
-  font-family: 'Manrope', sans-serif;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border-radius: 999px;
+  background: var(--surface-color);
+  border: 2px solid var(--border-color);
+  box-shadow: 0 6px 18px rgba(26, 83, 92, 0.12);
 }
 
-.difficulty-btn:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 6px 20px rgba(26, 83, 92, 0.2);
-  border-color: var(--primary-color);
-}
-
-.difficulty-btn.active {
-  background: linear-gradient(135deg, var(--primary-color), #2d6e78);
-  border-color: var(--primary-color);
-  color: white;
-  box-shadow: 0 6px 20px rgba(26, 83, 92, 0.3);
-}
-
-.difficulty-emoji {
+.header-emoji {
   font-size: 2rem;
   line-height: 1;
 }
 
-.difficulty-name {
-  font-size: 1.2rem;
+.header-pill {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.1;
+}
+
+.pill-label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-light);
+  font-weight: 600;
+}
+
+.pill-name {
+  font-size: 1.1rem;
   font-weight: 700;
+  color: var(--primary-color);
 }
 
-.difficulty-desc {
-  font-size: 0.85rem;
-  opacity: 0.8;
-}
-
-.difficulty-btn.active .difficulty-desc {
-  opacity: 1;
-}
-
-.start-section {
+/* Difficulty Selection */
+.difficulty-selection {
   text-align: center;
+}
+
+.difficulty-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem;
   margin-bottom: 2rem;
 }
 
-.btn-start {
-  padding: 1.5rem 3rem;
-  font-size: 1.3rem;
-  font-weight: 700;
-  color: white;
-  background: linear-gradient(135deg, var(--primary-color), #2d6e78);
-  border: none;
-  border-radius: 12px;
+.difficulty-card {
+  background: var(--surface-color);
+  border: 2px solid var(--border-color);
+  border-radius: 16px;
+  padding: 2rem;
   cursor: pointer;
   transition: all 0.3s ease;
-  font-family: 'Manrope', sans-serif;
-  box-shadow: 0 6px 20px rgba(26, 83, 92, 0.3);
+  text-align: center;
+  position: relative;
 }
 
-.btn-start:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 8px 25px rgba(26, 83, 92, 0.4);
+.difficulty-card:hover:not(.locked) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+  border-color: var(--primary-color);
 }
 
-.game-area {
-  max-width: 700px;
-  margin: 0 auto;
+.difficulty-card.selected {
+  border-color: var(--primary-color);
+  background: var(--primary-light);
 }
 
+.difficulty-card.locked {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background: var(--background-color);
+}
+
+.difficulty-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.difficulty-emoji {
+  font-size: 2rem;
+}
+
+.difficulty-card h3 {
+  font-size: 1.5rem;
+  margin: 0;
+  color: var(--text-primary);
+}
+
+.difficulty-description {
+  color: var(--text-light);
+  margin: 0 0 1rem 0;
+}
+
+.locked-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: 600;
+}
+
+.lock-icon {
+  font-size: 2rem;
+  margin-bottom: 0.5rem;
+}
+
+.start-game-btn {
+  background: var(--primary-color);
+  color: white;
+  border: none;
+  padding: 1rem 2rem;
+  border-radius: 12px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.start-game-btn:hover:not(:disabled) {
+  background: var(--primary-dark);
+  transform: translateY(-2px);
+}
+
+.start-game-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Game Layout */
+.game-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(260px, 1.4fr);
+  align-items: flex-start;
+  gap: 2rem;
+  margin-top: 1.5rem;
+}
+
+.game-main {
+  width: 100%;
+}
+
+/* Question Section */
 .question-section {
   text-align: center;
   margin-bottom: 3rem;
@@ -589,6 +866,7 @@ onMounted(async () => {
   color: var(--text-light);
 }
 
+/* Answer Choices */
 .choices-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -650,6 +928,7 @@ onMounted(async () => {
   75% { transform: translateX(5px); }
 }
 
+/* Result Section */
 .result-section {
   text-align: center;
   margin-bottom: 2rem;
@@ -657,6 +936,13 @@ onMounted(async () => {
   background: var(--surface-color);
   border-radius: 12px;
   border: 2px solid var(--border-color);
+}
+
+.result-details {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  align-items: center;
 }
 
 .result-message {
@@ -693,6 +979,29 @@ onMounted(async () => {
   font-size: 1.3rem;
 }
 
+.mobile-result-toast {
+  display: none;
+}
+
+.toast-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.toast-icon {
+  font-size: 1.5rem;
+}
+
+.toast-title {
+  font-weight: 700;
+}
+
+.toast-answer {
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
 .submit-section {
   text-align: center;
   margin-bottom: 2rem;
@@ -718,145 +1027,158 @@ onMounted(async () => {
   box-shadow: 0 6px 20px rgba(26, 83, 92, 0.4);
 }
 
-.game-stats {
+/* Side HUD */
+.side-hud {
   display: flex;
-  justify-content: space-around;
-  padding: 1.5rem;
-  background: var(--surface-color);
-  border-radius: 12px;
-  border: 2px solid var(--border-color);
-  margin-bottom: 2rem;
-  box-shadow: 0 2px 8px rgba(26, 83, 92, 0.1);
+  justify-content: flex-start;
 }
 
-.stat-item {
+.side-hud-card {
+  width: 100%;
+  padding: 1.5rem;
+  border-radius: 20px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(249, 219, 189, 0.15));
+  box-shadow: 0 12px 32px rgba(17, 37, 52, 0.15);
   display: flex;
   flex-direction: column;
+  gap: 1rem;
+  min-height: 100%;
+  border: 1px solid rgba(26, 83, 92, 0.1);
+  backdrop-filter: blur(4px);
+}
+
+.side-hud-header {
+  display: flex;
   align-items: center;
+  gap: 0.75rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid rgba(26, 83, 92, 0.08);
+}
+
+.summary-emoji {
+  font-size: 2.1rem;
+}
+
+.summary-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
   gap: 0.25rem;
 }
 
-.stat-label {
-  font-size: 0.85rem;
-  color: var(--text-light);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  font-weight: 600;
-}
-
-.stat-value {
+.summary-text h2 {
+  margin: 0;
   font-size: 1.5rem;
   color: var(--primary-color);
+  font-family: 'Manrope', sans-serif;
   font-weight: 700;
-  font-family: 'Manrope', sans-serif;
 }
 
-.completion-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.8);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-}
-
-.completion-popup {
-  background: var(--surface-color);
-  padding: 3rem;
-  border-radius: 20px;
-  text-align: center;
-  max-width: 500px;
-  width: 90%;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-}
-
-.completion-icon {
-  font-size: 4rem;
-  margin-bottom: 1rem;
-}
-
-.completion-popup h2 {
-  color: var(--primary-color);
-  margin: 0 0 1rem 0;
-  font-size: 2rem;
-}
-
-.completion-popup p {
-  color: var(--text-light);
-  margin-bottom: 2rem;
-  font-size: 1.1rem;
-}
-
-.completion-stats {
-  display: flex;
-  justify-content: center;
-  gap: 2rem;
-  margin-bottom: 2rem;
-}
-
-.stat-box {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.stat-num {
-  font-size: 2rem;
-  color: var(--primary-color);
-  font-weight: 800;
-  font-family: 'Manrope', sans-serif;
-}
-
-.stat-txt {
-  font-size: 0.9rem;
-  color: var(--text-light);
+.summary-label {
+  font-size: 0.8rem;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.08em;
+  color: var(--text-light);
   font-weight: 600;
 }
 
-.completion-actions {
-  display: flex;
-  gap: 1rem;
-  justify-content: center;
+.summary-description {
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--text-light);
+  line-height: 1.5;
 }
 
-.btn-play-again, .btn-close {
-  padding: 1rem 2rem;
+.side-hud-metrics {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.hud-metric {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.85rem 1rem;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 2px 8px rgba(26, 83, 92, 0.08);
+  border: 1px solid rgba(26, 83, 92, 0.05);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.hud-metric:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(26, 83, 92, 0.12);
+}
+
+.metric-label {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-light);
+  font-weight: 600;
+}
+
+.metric-value {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: var(--primary-color);
+  font-family: 'Manrope', sans-serif;
+  line-height: 1;
+}
+
+.hud-cta {
+  border: none;
+  border-radius: 999px;
+  padding: 0.75rem 1.8rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, #58cc02, #2fb86d);
+  color: #ffffff;
+  cursor: pointer;
+  box-shadow: 0 10px 20px rgba(88, 204, 2, 0.35);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  justify-self: end;
+}
+
+.hud-cta:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 24px rgba(88, 204, 2, 0.45);
+}
+
+.side-hud-cta {
+  width: 100%;
+  margin-top: 1.5rem;
+  padding: 0.85rem 1.5rem;
   font-size: 1rem;
   font-weight: 700;
-  border: none;
-  border-radius: 8px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #58cc02, #2fb86d);
+  color: #ffffff;
   cursor: pointer;
-  transition: all 0.3s ease;
-  font-family: 'Manrope', sans-serif;
+  box-shadow: 0 8px 20px rgba(88, 204, 2, 0.4);
+  transition: all 0.2s ease;
+  border: none;
+  letter-spacing: 0.02em;
 }
 
-.btn-play-again {
-  background: var(--primary-color);
-  color: white;
-  box-shadow: 0 4px 12px rgba(26, 83, 92, 0.3);
-}
-
-.btn-play-again:hover {
-  background: var(--primary-hover);
+.side-hud-cta:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(26, 83, 92, 0.4);
+  box-shadow: 0 10px 24px rgba(88, 204, 2, 0.5);
 }
 
-.btn-close {
-  background: var(--text-light);
-  color: white;
-}
+/* Responsive Design */
+@media (max-width: 1024px) {
+  .sound-detective {
+    padding: 1.5rem;
+    max-width: 100%;
+  }
 
-.btn-close:hover {
-  background: #555;
-  transform: translateY(-2px);
+  .game-layout {
+    grid-template-columns: minmax(0, 2fr) minmax(240px, 1.2fr);
+    gap: 1.5rem;
+    margin-top: 1.25rem;
+  }
 }
 
 @media (max-width: 640px) {
@@ -864,13 +1186,41 @@ onMounted(async () => {
     padding: 1rem;
   }
   
+  .game-main {
+    padding-bottom: 5.5rem;
+  }
+  
+  .game-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+  
   .game-header h1 {
     font-size: 1.75rem;
   }
   
-  .difficulty-selector {
+  .subtitle {
+    font-size: 1rem;
+  }
+  
+  .header-level {
+    align-self: stretch;
+    justify-content: flex-start;
+  }
+  
+  .game-layout {
     grid-template-columns: 1fr;
-    gap: 0.75rem;
+    gap: 1.5rem;
+    margin-top: 1.25rem;
+  }
+  
+  .side-hud {
+    order: 2;
+  }
+  
+  .difficulty-cards {
+    grid-template-columns: 1fr;
   }
   
   .choices-grid {
@@ -883,19 +1233,105 @@ onMounted(async () => {
     min-height: 80px;
   }
   
-  .game-stats {
-    flex-direction: column;
-    gap: 1rem;
-    text-align: center;
+  .result-section {
+    background: transparent;
+    border: none;
+    padding: 0;
+    margin-bottom: 1rem;
   }
   
-  .completion-stats {
-    flex-direction: column;
-    gap: 1rem;
+  .result-details {
+    display: none;
   }
   
-  .completion-actions {
-    flex-direction: column;
+  .mobile-result-toast {
+    position: fixed;
+    bottom: calc(6.25rem + env(safe-area-inset-bottom, 0px));
+    left: 50%;
+    transform: translate(-50%, 24px);
+    width: min(420px, calc(100% - 2.5rem));
+    padding: 0.95rem 1.1rem;
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    box-shadow: 0 18px 32px rgba(26, 83, 92, 0.35);
+    z-index: 850;
+    opacity: 0;
+    animation: toast-pop 0.35s ease-out forwards;
+  }
+  
+  .mobile-result-toast.correct {
+    background: linear-gradient(135deg, var(--success-color), #2ecc71);
+    color: #ffffff;
+  }
+  
+  .mobile-result-toast.correct .toast-answer strong {
+    color: #ffffff;
+  }
+  
+  .mobile-result-toast.incorrect {
+    background: linear-gradient(135deg, var(--error-color), #d64541);
+    color: #ffffff;
+  }
+  
+  .mobile-result-toast.incorrect .toast-answer strong {
+    color: #ffffff;
+  }
+  
+  .mobile-result-toast .toast-answer {
+    color: inherit;
+  }
+  
+  .mobile-result-toast .toast-answer strong {
+    font-weight: 700;
+  }
+  
+  .toast-icon {
+    font-size: 1.75rem;
+  }
+  
+  .toast-title {
+    font-size: 1.1rem;
+    letter-spacing: 0.01em;
+  }
+  
+  @keyframes toast-pop {
+    0% {
+      opacity: 0;
+      transform: translate(-50%, 32px);
+    }
+    100% {
+      opacity: 1;
+      transform: translate(-50%, 0);
+    }
+  }
+  
+  .submit-section {
+    margin-bottom: 0;
+  }
+  
+  .mobile-action-button {
+    position: fixed;
+    bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
+    left: 50%;
+    transform: translateX(-50%);
+    width: min(420px, calc(100% - 2rem));
+    z-index: 800;
+    box-shadow: 0 16px 28px rgba(26, 83, 92, 0.35);
+  }
+  
+  .mobile-action-button:hover:not(:disabled) {
+    transform: translate(-50%, -2px);
+  }
+  
+  .mobile-action-button:active:not(:disabled) {
+    transform: translate(-50%, 0);
+  }
+  
+  .hud-cta,
+  .side-hud-cta {
+    width: 100%;
   }
 }
 </style>
