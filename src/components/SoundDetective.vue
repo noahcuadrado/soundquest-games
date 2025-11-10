@@ -147,18 +147,12 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { playIPASound, preloadIPAAudio } from '../services/ipaAudioService'
 import { selectedLanguage, languagePhonemes } from '../stores/languageStore'
+import { useGameState, useAudioLoading, getDifficultyPhonemes } from '../utils/gameHelpers'
+import LoadingSpinner from './LoadingSpinner.vue'
 
 const router = useRouter()
-
-// Check if user has selected a language, redirect if not
-function checkLanguageSelection() {
-  if (!selectedLanguage.value) {
-    // Redirect to home page to select language
-    router.push('/')
-    return false
-  }
-  return true
-}
+const { checkLanguageSelection, goBack, saveGameStats, calculateAccuracy } = useGameState()
+const { isAudioLoading, audioError, preloadAudioWithLoading } = useAudioLoading()
 
 // Difficulty levels with vowels organized by commonality
 const difficulties = [

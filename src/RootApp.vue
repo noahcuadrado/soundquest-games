@@ -1,31 +1,33 @@
 <template>
-  <div id="app">
-    <header class="app-header">
-      <div class="logo">
-        <img src="/soundquest-logo.svg" alt="SoundQuest" />
-      </div>
-      
-      <!-- Language Display in Header -->
-      <div class="header-language-display" v-if="selectedLanguage">
-        <span class="language-name">{{ selectedLanguage.language_name }}</span>
-        <button @click="changeLanguage" class="change-language-btn">Change</button>
-      </div>
-      
-      <nav class="app-nav" v-if="showBackButton">
-        <button @click="goHome" class="back-btn">
-          ← Back to Games
-        </button>
-      </nav>
-    </header>
+  <ErrorBoundary>
+    <div id="app">
+      <header class="app-header">
+        <div class="logo">
+          <img src="/soundquest-logo.svg" alt="SoundQuest" />
+        </div>
+        
+        <!-- Language Display in Header -->
+        <div class="header-language-display" v-if="selectedLanguage">
+          <span class="language-name">{{ selectedLanguage.language_name }}</span>
+          <button @click="changeLanguage" class="change-language-btn">Change</button>
+        </div>
+        
+        <nav class="app-nav" v-if="showBackButton">
+          <button @click="goHome" class="back-btn">
+            ← Back to Games
+          </button>
+        </nav>
+      </header>
 
-    <main class="app-main">
-      <router-view />
-    </main>
+      <main class="app-main">
+        <router-view />
+      </main>
 
-    <footer class="app-footer">
-      <p>&copy; 2024 SoundQuest. Tune in before you speak.</p>
-    </footer>
-  </div>
+      <footer class="app-footer">
+        <p>&copy; 2024 SoundQuest. Tune in before you speak.</p>
+      </footer>
+    </div>
+  </ErrorBoundary>
 </template>
 
 <script setup>

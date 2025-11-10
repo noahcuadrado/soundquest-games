@@ -31,11 +31,12 @@ const routes = [
     name: 'PronunciationCoach',
     component: () => import('../components/PronunciationCoach.vue')
   },
-  {
-    path: '/sound-sequence',
-    name: 'SoundSequence',
-    component: () => import('../components/SoundSequence.vue')
-  },
+  // Sound Sequence game removed - needs implementation
+  // {
+  //   path: '/sound-sequence',
+  //   name: 'SoundSequence',
+  //   component: () => import('../components/SoundSequence.vue')
+  // },
   {
     path: '/minimal-pairs',
     name: 'MinimalPairs',

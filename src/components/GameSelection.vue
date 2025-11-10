@@ -19,9 +19,8 @@
         </button>
       </div>
       
-      <div v-else-if="languagesLoading" class="loading-message">
-        <div class="loading-spinner">🔄</div>
-        <p>Loading available languages...</p>
+      <div v-else-if="languagesLoading" class="loading-container">
+        <LoadingSpinner text="Loading available languages..." size="large" />
       </div>
       
       <div v-else class="no-languages-message">
@@ -277,6 +276,7 @@ import {
 import { StarIcon } from '@heroicons/vue/24/solid'
 import { selectedLanguage, availableLanguages, selectLanguage as selectLang, initializeLanguageStore } from '../stores/languageStore'
 import { getMemoryProgression, LEVEL_REQUIREMENTS } from '../utils/progressionSystem'
+import LoadingSpinner from './LoadingSpinner.vue'
 
 const router = useRouter()
 
@@ -654,20 +654,16 @@ onMounted(async () => {
 }
 
 
-.loading-message, .no-languages-message {
+.loading-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 3rem;
+}
+
+.no-languages-message {
   padding: 2rem;
   color: var(--text-light);
-}
-
-.loading-spinner {
-  font-size: 2rem;
-  margin-bottom: 1rem;
-  animation: spin 2s linear infinite;
-}
-
-@keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
 }
 
 .no-languages-message p {

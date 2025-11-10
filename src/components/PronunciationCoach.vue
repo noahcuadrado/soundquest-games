@@ -11,7 +11,18 @@
         <div class="mic-icon">🎤</div>
         <h2>Microphone Access Required</h2>
         <p>This game needs access to your microphone to analyze your pronunciation and provide feedback.</p>
-        <button class="permission-btn" @click="requestPermission" :disabled="isRequestingPermission">
+        
+        <!-- Browser Compatibility Warning -->
+        <div v-if="!isCompatible" class="compatibility-warning">
+          <div class="warning-icon">⚠️</div>
+          <div class="warning-content">
+            <h3>Browser Compatibility Issue</h3>
+            <p>{{ browserWarning }}</p>
+            <p class="recommendation">Recommended: Chrome, Firefox, or Edge on desktop</p>
+          </div>
+        </div>
+        
+        <button class="permission-btn" @click="requestPermission" :disabled="isRequestingPermission || !isCompatible">
           {{ isRequestingPermission ? 'Requesting...' : 'Allow Microphone Access' }}
         </button>
         <div v-if="error" class="error-message">
@@ -277,6 +288,17 @@ const hasRecorded = ref(false)
 const isRequestingPermission = ref(false)
 const isPlayingTarget = ref(false)
 const currentFeedback = ref(null)
+const browserWarning = ref('')
+const isCompatible = ref(true)
+
+// Check compatibility on mount
+onMounted(() => {
+  const compatibility = checkBrowserCompatibility()
+  isCompatible.value = compatibility.isCompatible
+  if (compatibility.issues.length > 0) {
+    browserWarning.value = compatibility.issues.join('. ')
+  }
+})
 
 // Target formant ranges for different vowels
 const vowelTargets = {
@@ -397,10 +419,46 @@ function checkLanguageSelection() {
   return true
 }
 
+// Check browser compatibility
+function checkBrowserCompatibility() {
+  const compatibility = {
+    isCompatible: true,
+    issues: []
+  }
+
+  // Check for getUserMedia support
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    compatibility.isCompatible = false
+    compatibility.issues.push('Microphone access not supported in this browser')
+  }
+
+  // Check for Web Audio API support
+  const AudioContext = window.AudioContext || window.webkitAudioContext
+  if (!AudioContext) {
+    compatibility.isCompatible = false
+    compatibility.issues.push('Web Audio API not supported')
+  }
+
+  // Check for iOS Safari specific issues
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
+  if (isIOS) {
+    compatibility.issues.push('iOS Safari has limited audio analysis capabilities')
+  }
+
+  return compatibility
+}
+
 // Game functions
 async function requestPermission() {
   // Check if language is selected first
   if (!checkLanguageSelection()) {
+    return
+  }
+  
+  // Check browser compatibility
+  const compatibility = checkBrowserCompatibility()
+  if (!compatibility.isCompatible) {
+    error.value = `Browser not compatible: ${compatibility.issues.join(', ')}. Please try Chrome, Firefox, or Edge on desktop.`
     return
   }
   
@@ -410,6 +468,8 @@ async function requestPermission() {
     if (success) {
       gameState.value = 'difficulty'
     }
+  } catch (err) {
+    error.value = `Failed to access microphone: ${err.message}. Please check browser permissions.`
   } finally {
     isRequestingPermission.value = false
   }
@@ -709,6 +769,43 @@ watch(isInitialized, (newValue) => {
 .permission-btn:disabled {
   opacity: 0.7;
   cursor: not-allowed;
+}
+
+.error-message {
+  color: #ef4444;
+  margin-top: 1rem;
+  padding: 1rem;
+  background: #fef2f2;
+  border-radius: 8px;
+  border: 1px solid #fecaca;
+}
+
+.compatibility-warning {
+  margin: 1rem 0;
+  padding: 1rem;
+  background: #fffbeb;
+  border: 1px solid #f59e0b;
+  border-radius: 8px;
+}
+
+.warning-icon {
+  font-size: 2rem;
+  margin-bottom: 0.5rem;
+}
+
+.warning-content h3 {
+  color: #92400e;
+  margin: 0 0 0.5rem 0;
+}
+
+.warning-content p {
+  color: #92400e;
+  margin: 0 0 0.5rem 0;
+}
+
+.recommendation {
+  font-weight: 600;
+  font-style: italic;
 }
 
 .error-message {

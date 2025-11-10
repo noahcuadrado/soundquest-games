@@ -14,58 +14,69 @@
       </div>
     </header>
 
-    <section class="game-hud">
-      <div class="level-summary">
-        <div class="summary-header">
-          <span class="summary-emoji">{{ getCurrentLevelEmoji() }}</span>
-          <div class="summary-text">
-            <span class="summary-label">Current level</span>
-            <h2>{{ currentDifficultyName }}</h2>
-          </div>
-        </div>
-        <p class="summary-description">{{ getCurrentLevelDescription() }}</p>
-      </div>
-      <div class="hud-stats">
-        <div class="hud-metric">
-          <span class="metric-label">Pairs</span>
-          <span class="metric-value">{{ matchedPairs }}/{{ totalPairs }}</span>
-        </div>
-        <div class="hud-metric">
-          <span class="metric-label">Moves</span>
-          <span class="metric-value">{{ moves }}</span>
-        </div>
-        <div class="hud-metric">
-          <span class="metric-label">Best</span>
-          <span class="metric-value">{{ bestMoves > 0 ? bestMoves : 'N/A' }}</span>
-        </div>
-      </div>
-      <button @click="resetGame" class="hud-cta">
-        New Game
-      </button>
-    </section>
-
-    <!-- Game Area -->
-    <div class="memory-game">
-      <div class="game-grid">
-        <div
-          v-for="(card, index) in cards"
-          :key="index"
-          class="memory-card"
-          :class="{
-            flipped: card.flipped,
-            matched: card.matched,
-            disabled: isChecking
-          }"
-          @click="flipCard(index)"
-        >
-          <div class="card-inner">
-            <div class="card-front">
-              <img src="/SQ.svg" alt="SQ" class="card-icon" />
+    <!-- Layout based on Figma reference:
+         - Large left grid of cards
+         - Single tall right panel with level info + stats + actions
+         - Top header kept separate -->
+    <div class="game-layout">
+      <!-- LEFT: Memory grid -->
+      <div class="memory-game">
+        <div class="game-grid">
+          <div
+            v-for="(card, index) in cards"
+            :key="index"
+            class="memory-card"
+            :class="{
+              flipped: card.flipped,
+              matched: card.matched,
+              disabled: isChecking
+            }"
+            @click="flipCard(index)"
+          >
+            <div class="card-inner">
+              <div class="card-front">
+                <img src="/SQ.svg" alt="SQ" class="card-icon" />
+              </div>
+              <div class="card-back">{{ card.symbol }}</div>
             </div>
-            <div class="card-back">{{ card.symbol }}</div>
           </div>
         </div>
       </div>
+
+      <!-- RIGHT: Single vertical HUD panel -->
+      <aside class="side-hud">
+        <div class="side-hud-card">
+          <div class="side-hud-header">
+            <span class="summary-emoji">{{ getCurrentLevelEmoji() }}</span>
+            <div class="summary-text">
+              <span class="summary-label">Current level</span>
+              <h2>{{ currentDifficultyName }}</h2>
+            </div>
+          </div>
+          <p class="summary-description">
+            {{ getCurrentLevelDescription() }}
+          </p>
+
+          <div class="side-hud-metrics">
+            <div class="hud-metric">
+              <span class="metric-label">Pairs</span>
+              <span class="metric-value">{{ matchedPairs }}/{{ totalPairs }}</span>
+            </div>
+            <div class="hud-metric">
+              <span class="metric-label">Moves</span>
+              <span class="metric-value">{{ moves }}</span>
+            </div>
+            <div class="hud-metric">
+              <span class="metric-label">Best</span>
+              <span class="metric-value">{{ bestMoves > 0 ? bestMoves : 'N/A' }}</span>
+            </div>
+          </div>
+
+          <button @click="resetGame" class="hud-cta side-hud-cta">
+            New Game
+          </button>
+        </div>
+      </aside>
     </div>
 
     <!-- Game Celebration Component -->
@@ -473,10 +484,13 @@ onMounted(async () => {
 
 <style scoped>
 .ipa-game {
-  max-width: 900px;
+  max-width: 1200px;
   margin: 0 auto;
-  padding: 2rem;
+  padding: 2.25rem 2.5rem 2.5rem;
   min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  gap: 1.75rem;
 }
 
 .game-header {
@@ -543,18 +557,10 @@ onMounted(async () => {
   color: var(--primary-color);
 }
 
+/* Top banner retained minimal, mainly for consistency if needed later */
 .game-hud {
-  display: grid;
-  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1.2fr) auto;
-  align-items: center;
-  gap: 1.5rem;
-  padding: 1.5rem 1.75rem;
-  border-radius: 20px;
-  border: 2px solid var(--border-color);
-  background: linear-gradient(135deg, rgba(28, 176, 246, 0.1), rgba(88, 204, 2, 0.08));
-  margin-bottom: 2.5rem;
-  box-shadow: 0 12px 24px rgba(17, 37, 52, 0.08);
-  }
+  display: none;
+}
 
 .level-summary {
   display: flex;
@@ -604,7 +610,7 @@ onMounted(async () => {
 
 .hud-stats {
   display: flex;
-  justify-content: center;
+  justify-content: flex-end;
   gap: 1.25rem;
   flex-wrap: wrap;
 }
@@ -649,27 +655,39 @@ onMounted(async () => {
   justify-self: end;
 }
 
+.game-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(260px, 1.4fr);
+  align-items: flex-start;
+  gap: 2rem;
+  margin-top: 1.5rem;
+}
+
 .hud-cta:hover {
   transform: translateY(-2px);
   box-shadow: 0 12px 24px rgba(88, 204, 2, 0.45);
 }
 
 .memory-game {
-  max-width: 700px;
-  margin: 0 auto;
+  width: 100%;
 }
 
 .game-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  /* Exactly 3 columns that fill available width but don't grow too large */
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 1rem;
-  margin-bottom: 2rem;
+  width: 100%;
+  max-width: 520px; /* Cap total grid width to prevent cards from getting too large */
 }
 
 .memory-card {
-  aspect-ratio: 1;
+  aspect-ratio: 4 / 5;
   perspective: 1000px;
   cursor: pointer;
+  width: 100%;
+  max-width: 160px; /* Cap individual card size */
+  margin: 0 auto; /* Center cards in their grid cells */
 }
 
 .memory-card.disabled {
@@ -699,7 +717,7 @@ onMounted(async () => {
   align-items: center;
   justify-content: center;
   border-radius: 12px;
-  font-size: 2rem;
+  font-size: 1.6rem;
   font-weight: 700;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   transition: all 0.3s ease;
@@ -741,6 +759,49 @@ onMounted(async () => {
   color: white;
 }
 
+.side-hud {
+  display: flex;
+  justify-content: flex-start;
+}
+
+.side-hud-card {
+  width: 100%;
+  padding: 1.25rem 1.5rem 1.5rem;
+  border-radius: 18px;
+  border: 2px solid var(--border-color);
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 10px 24px rgba(17, 37, 52, 0.12);
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  min-height: 100%;
+}
+
+.side-hud-card h3 {
+  margin: 0 0 0.25rem;
+  font-size: 1.1rem;
+  color: var(--primary-color);
+}
+
+.side-hud-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.side-hud-metrics {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.side-hud-cta {
+  width: 100%;
+  margin-top: 1.25rem;
+  justify-self: stretch;
+}
+
 @keyframes matchPulse {
   0%, 100% {
     transform: rotateY(180deg) scale(1);
@@ -751,6 +812,25 @@ onMounted(async () => {
 }
 
 
+@media (max-width: 1024px) {
+  .ipa-game {
+    padding: 1.5rem;
+    max-width: 100%;
+  }
+
+  .game-layout {
+    grid-template-columns: minmax(0, 2fr) minmax(240px, 1.2fr);
+    gap: 1.5rem;
+    margin-top: 1.25rem;
+  }
+
+  .game-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.75rem;
+    max-width: 460px;
+  }
+}
+
 @media (max-width: 640px) {
   .ipa-game {
     padding: 1rem;
@@ -759,6 +839,7 @@ onMounted(async () => {
   .game-header {
     flex-direction: column;
     align-items: flex-start;
+    gap: 0.75rem;
   }
   
   .game-header h1 {
@@ -774,48 +855,39 @@ onMounted(async () => {
     justify-content: flex-start;
   }
   
-  .game-hud {
+  .game-layout {
     grid-template-columns: 1fr;
-    gap: 1rem;
-    padding: 1.25rem 1.5rem;
+    gap: 1.5rem;
+    margin-top: 1.25rem;
   }
-  
-  .summary-header {
-    flex-direction: row;
-    text-align: center;
+
+  .memory-game {
     justify-content: center;
   }
 
-  .summary-text {
-    align-items: center;
-  }
-  
-  .summary-text h2 {
-    font-size: 1.35rem;
-  }
-  
   .game-grid {
-    grid-template-columns: repeat(3, 1fr);
-    gap: 0.75rem;
+    margin: 0 auto;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.5rem;
+    max-width: 360px;
   }
 
-  .hud-stats {
-    justify-content: flex-start;
-    flex-wrap: wrap;
-    gap: 0.75rem;
+  .memory-card {
+    max-width: 110px; /* Smaller cards on mobile */
   }
 
-  .hud-metric {
-    min-width: 110px;
-  }
-
-  .hud-cta {
-    width: 100%;
-  }
-  
   .card-front,
   .card-back {
-    font-size: 1.5rem;
+    font-size: 1.4rem;
+  }
+
+  .side-hud {
+    order: 2;
+  }
+  
+  .hud-cta,
+  .side-hud-cta {
+    width: 100%;
   }
 }
 </style>
